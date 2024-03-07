@@ -11,7 +11,7 @@
 
 namespace opengles_workspace
 {
-class GLFWRenderer : public PolledObject
+	class GLFWRenderer : public PolledObject
 	{
 	public:
 		GLFWRenderer(std::shared_ptr<Context> context);
@@ -19,14 +19,16 @@ class GLFWRenderer : public PolledObject
 		~GLFWRenderer() = default;
 
 		void render();
-		void calculate_square_values(std::vector<GLfloat>& vec,std::vector<GLfloat>& vec2);
-		void draw(GLuint shader_program, std::vector<GLfloat>& vertices, std::vector<GLfloat> color);
-		void clear_back_buffer();
 
 		bool poll() override;
-	private:
 
+	private:
+		void calculate_square_values(std::vector<GLfloat> &vec, std::vector<GLfloat> &vec2);
+		void draw(GLuint shader_program, std::vector<GLfloat> &vertices, std::vector<GLfloat> color);
+		void clear_back_buffer();
+		bool checkProgramStatus(GLuint programId);
+		bool checkUniformLocationError(GLint location, const char* variableName);
 		std::shared_ptr<Context> mContext;
-		GLFWwindow* window() const { return static_cast<GLFWwindow*>(mContext->window()); }
+		GLFWwindow *window() const { return static_cast<GLFWwindow *>(mContext->window()); }
 	};
 }
