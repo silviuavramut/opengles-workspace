@@ -24,7 +24,7 @@ namespace opengles_workspace
 
 	private:
 		void calculate_square_values(std::vector<GLfloat> &vec, std::vector<GLfloat> &vec2);
-		void draw(GLuint shader_program, std::vector<GLfloat> &vertices, std::vector<GLfloat> color);
+		void draw(std::vector<GLfloat> &vertices, std::vector<GLfloat> color);
 		void clear_back_buffer();
 		bool checkProgramStatus(GLuint programId);
 		bool checkUniformLocationError(GLint location, const char* variableName);

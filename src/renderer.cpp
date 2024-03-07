@@ -15,59 +15,32 @@ namespace opengles_workspace
 {
 
 	// Shader Sources
-	const char *vShaderStr =
-		"#version 300 es                          \n"
-		"layout(location = 0) in vec4 vPosition;  \n"
-		"void main()                              \n"
-		"{                                        \n"
-		"   gl_Position = vec4(vPosition.x, vPosition.y, vPosition.z, 1.0);              \n"
-		"}                                        \n";
+		const char *vShaderStr =
+			"#version 300 es                          \n"
+			"layout(location = 0) in vec4 vPosition;  \n"
+			"void main()                              \n"
+			"{                                        \n"
+			"   gl_Position = vec4(vPosition.x, vPosition.y, vPosition.z, 1.0);              \n"
+			"}                                        \n";
 
-	const char *fShaderStr =
-		"#version 300 es                              \n"
-		"precision mediump float;                       \n"
-		"uniform vec4 uniformColor;                        \n"
-		"out vec4 FragColor;                          \n"
-		"void main()                                  \n"
-		"{                                            \n"
-		"   FragColor = uniformColor;  \n"
-		"}                                            \n";
+		const char *fShaderStr =
+			"#version 300 es                              \n"
+			"precision mediump float;                       \n"
+			"uniform vec4 uniformColor;                        \n"
+			"out vec4 FragColor;                          \n"
+			"void main()                                  \n"
+			"{                                            \n"
+			"   FragColor = uniformColor;  \n"
+			"}                                            \n";
+
 
 	std::vector<GLfloat> vVertices_white{};
 	std::vector<GLfloat> vVertices_blue{};
-	GLuint vertexShader, fragmentShader, shaderProgram;
 
 	GLFWRenderer::GLFWRenderer(std::shared_ptr<Context> context)
 		: mContext(std::move(context))
 	{
-		// Initialize the shaders and the program
-		vertexShader = glCreateShader(GL_VERTEX_SHADER);
-		fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-		GLuint shaderProgram = glCreateProgram();
-
-		glShaderSource(vertexShader, 1, &vShaderStr, NULL);
-		glCompileShader(vertexShader);
-
-		glShaderSource(fragmentShader, 1, &fShaderStr, NULL);
-		glCompileShader(fragmentShader);
-
-		glAttachShader(shaderProgram, vertexShader);
-		glAttachShader(shaderProgram, fragmentShader);
-		glLinkProgram(shaderProgram);
-
-		if (checkProgramStatus(shaderProgram))
-		{
-			// Program created and linked successfully
-			std::cout << "Linked with sucess \n ";
-		}
-		else
-		{
-			// Error occurred during program creation or linking
-			std::cout << "Fail \n ";
-		}
-
-		glDeleteShader(vertexShader);
-		glDeleteShader(fragmentShader);
+		
 	}
 
 	bool GLFWRenderer::checkProgramStatus(GLuint programId)
@@ -111,8 +84,8 @@ namespace opengles_workspace
 		std::vector<GLfloat> blue_color = {0.0f, 0.0f, 1.0f, 1.0f};
 		clear_back_buffer();
 		calculate_square_values(vVertices_white, vVertices_blue);
-		// draw(shaderProgram, vVertices_white, white_color);
-		draw(shaderProgram, vVertices_blue, blue_color);
+		draw(vVertices_white, white_color);
+		draw(vVertices_blue, blue_color);
 
 		glfwSwapBuffers(window());
 	}
@@ -195,8 +168,29 @@ namespace opengles_workspace
 		}
 	}
 
-	void GLFWRenderer::draw(GLuint shaderProgram, std::vector<GLfloat> &vertices, std::vector<GLfloat> color)
+	void GLFWRenderer::draw(std::vector<GLfloat> &vertices, std::vector<GLfloat> color)
 	{
+		
+		GLuint vertexShader, fragmentShader, shaderProgram;
+
+		// Initialize the shaders and the program
+		vertexShader = glCreateShader(GL_VERTEX_SHADER);
+		fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+		shaderProgram = glCreateProgram();
+
+		glShaderSource(vertexShader, 1, &vShaderStr, NULL);
+		glCompileShader(vertexShader);
+
+		glShaderSource(fragmentShader, 1, &fShaderStr, NULL);
+		glCompileShader(fragmentShader);
+
+		glAttachShader(shaderProgram, vertexShader);
+		glAttachShader(shaderProgram, fragmentShader);
+		glLinkProgram(shaderProgram);
+
+		glDeleteShader(vertexShader);
+		glDeleteShader(fragmentShader);
+
 		// Create reference containers for VAO and VBO
 		GLuint VAO, VBO;
 
@@ -215,17 +209,6 @@ namespace opengles_workspace
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		glBindVertexArray(0);
 		// GL code begin
-
-		// if (checkProgramStatus(shaderProgram))
-		// {
-		// 	// Program created and linked successfully
-		// 	std::cout << "Still linked with sucess \n ";
-		// }
-		// else
-		// {
-		// 	// Error occurred during program creation or linking
-		// 	std::cout << "Fail \n ";
-		// }
 
 		// Tell OpenGL which Shader Program we want to use
 		glUseProgram(shaderProgram);
