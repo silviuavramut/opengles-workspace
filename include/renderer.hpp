@@ -28,6 +28,7 @@ namespace opengles_workspace
 		void clear_back_buffer();
 		bool checkProgramStatus(GLuint programId);
 		bool checkUniformLocationError(GLint location, const char* variableName);
+		bool readNumbersFromFile(const std::string &filename, int &num1, int &num2);
 		std::shared_ptr<Context> mContext;
 		GLFWwindow *window() const { return static_cast<GLFWwindow *>(mContext->window()); }
 	};
