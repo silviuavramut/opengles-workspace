@@ -13,28 +13,69 @@
 
 namespace opengles_workspace
 {
+
+	// Shader Sources
+	const char *vShaderStr =
+		"#version 300 es                          \n"
+		"layout(location = 0) in vec4 vPosition;  \n"
+		"void main()                              \n"
+		"{                                        \n"
+		"   gl_Position = vec4(vPosition.x, vPosition.y, vPosition.z, 1.0);              \n"
+		"}                                        \n";
+
+	const char *fShaderStr =
+		"#version 300 es                              \n"
+		"uniform vec4 u_color;                        \n"
+		"out vec4 FragColor;                          \n"
+		"void main()                                  \n"
+		"{                                            \n"
+		"   FragColor = u_color;  \n"
+		"}                                            \n";
+
+	std::vector<GLfloat> vVertices_white{};
+	std::vector<GLfloat> vVertices_blue{};
+	GLuint vertexShader,fragmentShader,shaderProgram;
+
 	GLFWRenderer::GLFWRenderer(std::shared_ptr<Context> context)
 		: mContext(std::move(context))
 	{
-		
+		// Initialize the shaders and the program
+		GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+		GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+		GLuint shaderProgram = glCreateProgram();
+
+		glShaderSource(vertexShader, 1, &vShaderStr, nullptr);
+		glCompileShader(vertexShader);
+
+		glShaderSource(fragmentShader, 1, &fShaderStr, nullptr);
+		glCompileShader(fragmentShader);
+
+		glAttachShader(shaderProgram, vertexShader);
+		glAttachShader(shaderProgram, fragmentShader);
+
+		glLinkProgram(shaderProgram);
+
+		glDeleteShader(vertexShader);
+		glDeleteShader(fragmentShader);
 	}
 
 	void GLFWRenderer::render()
 	{
 
-		std::vector<GLfloat> vVertices_white{};
-		std::vector<GLfloat> vVertices_blue{};
-		// std::vector<GLfloat> white_color = {0.0f, 0.0f, 1.0f, 1.0f};
-		// std::vector<GLfloat> blue_color = {0.0f, 0.0f, 1.0f, 1.0f};
-
-
-		calculate_square_values(vVertices_white,vVertices_blue);
-		draw(vVertices_white);
-		//draw(vVertices_blue, blue_color);
+		std::vector<GLfloat> white_color = {0.0f, 0.0f, 1.0f, 1.0f};
+		std::vector<GLfloat> blue_color = {0.0f, 0.0f, 1.0f, 1.0f};
+		clear_back_buffer();
+		calculate_square_values(vVertices_white, vVertices_blue);
+		draw(shaderProgram, vVertices_white, white_color);
+		//draw(shaderProgram, vVertices_blue);
 
 		glfwSwapBuffers(window());
-
-
+	}
+	void GLFWRenderer::clear_back_buffer(){
+			// Specify the color of the background
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		// Clean the back buffer and assign the new color to it
+		glClear(GL_COLOR_BUFFER_BIT);
 	}
 
 	void GLFWRenderer::calculate_square_values(std::vector<GLfloat> &vec, std::vector<GLfloat> &vec2)
@@ -108,46 +149,10 @@ namespace opengles_workspace
 		}
 	}
 
-	void GLFWRenderer::draw(const std::vector<float> &vertices)
+	void GLFWRenderer::draw(GLuint shaderProgram,std::vector<GLfloat> &vertices, std::vector<GLfloat> color)
 	{
-		//Shader Sources
-		const char *vShaderStr =
-			"#version 300 es                          \n"
-			"layout(location = 0) in vec4 vPosition;  \n"
-			"void main()                              \n"
-			"{                                        \n"
-			"   gl_Position = vec4(vPosition.x, vPosition.y, vPosition.z, 1.0);              \n"
-			"}                                        \n";
 
-		const char *fShaderStr =
-			"#version 300 es                              \n"
-			"uniform vec4 color;                          \n"
-			"out vec4 fragColor;                          \n"
-			"void main()                                  \n"
-			"{                                            \n"
-			"   fragColor = color;  \n"
-			"}                                            \n";
-
-		// Initialize the shaders and the program
-		GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
-		GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-		GLuint shaderProgram = glCreateProgram();
-
-		glShaderSource(vertexShader, 1, &vShaderStr, NULL);
-		glCompileShader(vertexShader);
-
-		glShaderSource(fragmentShader, 1, &fShaderStr, NULL);
-		glCompileShader(fragmentShader);
-
-		glAttachShader(shaderProgram, vertexShader);		
-		glAttachShader(shaderProgram, fragmentShader);
-
-		glLinkProgram(shaderProgram);
-
-		glDeleteShader(vertexShader);
-		glDeleteShader(fragmentShader);
-
-		//Create reference containers for VAO and VBO
+		// Create reference containers for VAO and VBO
 		GLuint VAO, VBO;
 
 		glGenVertexArrays(1, &VAO);
@@ -168,16 +173,12 @@ namespace opengles_workspace
 		glBindVertexArray(0);
 		// GL code begin
 
-		// Specify the color of the background
-		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-		// Clean the back buffer and assign the new color to it
-		glClear(GL_COLOR_BUFFER_BIT);
 		// Tell OpenGL which Shader Program we want to use
 		glUseProgram(shaderProgram);
 		// Bind the VAO so OpenGL knows to use it
 
-		GLint colorLoc = glGetUniformLocation(shaderProgram,"color");
-		glUniform4f(colorLoc,0.0f,0.2f,1.0f,1.0f);
+		GLint colorLoc = glGetUniformLocation(shaderProgram, "u_color");
+		glUniform4f(colorLoc, color[0], color[1], color[2], color[3]);
 
 		glBindVertexArray(VAO);
 		glDrawArrays(GL_QUADS, 0, 4 * 32);
@@ -186,8 +187,7 @@ namespace opengles_workspace
 		glDeleteVertexArrays(1, &VAO);
 		glDeleteBuffers(1, &VBO);
 		glDeleteProgram(shaderProgram);
-		// Swap the back buffer with the front buffer
-
+	
 	}
 	bool GLFWRenderer::poll()
 	{

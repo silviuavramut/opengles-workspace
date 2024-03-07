@@ -20,7 +20,8 @@ class GLFWRenderer : public PolledObject
 
 		void render();
 		void calculate_square_values(std::vector<GLfloat>& vec,std::vector<GLfloat>& vec2);
-		void draw(const std::vector<float>& vertices);
+		void draw(GLuint shader_program, std::vector<GLfloat>& vertices, std::vector<GLfloat> color);
+		void clear_back_buffer();
 
 		bool poll() override;
 	private:
