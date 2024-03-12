@@ -1,5 +1,7 @@
+
 #include <renderer.hpp>
 #include <exception.hpp>
+#include "Texture.h"
 
 #include <memory>
 #include <optional>
@@ -9,7 +11,6 @@
 #include <fstream>
 #include <sstream>
 #include <string>
-
 
 #include <glad/gl.h>
 #define GLFW_INCLUDE_NONE
@@ -22,25 +23,32 @@ namespace opengles_workspace
 	const char *vShaderStr =
 		"#version 300 es                          \n"
 		"layout(location = 0) in vec4 vPosition;  \n"
+		"layout(location = 1) in vec2 tex;  \n"
+		"out vec2 TexCoord;  \n"
 		"void main()                              \n"
 		"{                                        \n"
 		"   gl_Position = vec4(vPosition.x, vPosition.y, vPosition.z, 1.0);              \n"
+		"   TexCoord = tex;              \n"
 		"}                                        \n";
 
 	const char *fShaderStr =
 		"#version 300 es                              \n"
 		"precision mediump float;                       \n"
 		"uniform vec4 uniformColor;                        \n"
+		"uniform sampler2D theTexture;                        \n"
+		"in vec2 TexCoord;                        \n"
 		"out vec4 FragColor;                          \n"
 		"void main()                                  \n"
 		"{                                            \n"
-		"   FragColor = uniformColor;  \n"
+		"   FragColor = texture(theTexture, TexCoord);  \n"
 		"}                                            \n";
 
-	std::vector<GLfloat> vVertices_white{};
-	std::vector<GLfloat> vVertices_blue{};
+	std::vector<GLfloat> vVertices_first_vector{};
+	std::vector<GLfloat> vVertices_second_vector{};
 	size_t nr_squares;
 	const size_t vertices_per_square = 4;
+
+	Texture texture;
 
 	GLFWRenderer::GLFWRenderer(std::shared_ptr<Context> context)
 		: mContext(std::move(context))
@@ -87,9 +95,11 @@ namespace opengles_workspace
 		std::vector<GLfloat> white_color = {1.0f, 1.0f, 1.0f, 1.0f};
 		std::vector<GLfloat> blue_color = {0.0f, 0.0f, 1.0f, 1.0f};
 		clear_back_buffer();
-		calculate_square_values(vVertices_white, vVertices_blue);
-		draw(vVertices_white, white_color);
-		draw(vVertices_blue, blue_color);
+		char *brick_texture = "/home/silviu/opengl-silviu/opengles-workspace/textures/brick.png";
+		char *dirt_texture = "/home/silviu/opengl-silviu/opengles-workspace/textures/dirt.png";
+		calculate_square_values(vVertices_first_vector, vVertices_second_vector);
+		draw_with_texture(vVertices_first_vector, brick_texture);
+		draw_with_texture(vVertices_second_vector, dirt_texture);
 
 		glfwSwapBuffers(window());
 	}
@@ -145,7 +155,7 @@ namespace opengles_workspace
 		GLfloat z = 0.0f;
 		int rows_from_file;
 		int columns_from_file;
-		readNumbersFromFile(filename,rows_from_file,columns_from_file);
+		readNumbersFromFile(filename, rows_from_file, columns_from_file);
 		GLfloat length_value_row = 2.0f / columns_from_file;
 		GLfloat length_value_column = 2.0f / rows_from_file;
 		nr_squares = rows_from_file * columns_from_file;
@@ -159,48 +169,72 @@ namespace opengles_workspace
 				GLfloat bottom_left_x = x;
 				GLfloat bottom_left_y = y - length_value_column;
 				GLfloat bottom_left_z = z;
+				GLfloat bottom_left_u = 0.0f;
+				GLfloat bottom_left_v = 0.0f;
 
 				GLfloat bottom_right_x = x + length_value_row;
 				GLfloat bottom_right_y = y - length_value_column;
 				GLfloat bottom_right_z = z;
+				GLfloat bottom_right_u = 1.0f;
+				GLfloat bottom_right_v = 0.0f;
 
 				GLfloat top_right_x = x + length_value_row;
 				GLfloat top_right_y = y;
 				GLfloat top_right_z = z;
+				GLfloat top_right_u = 1.0f;
+				GLfloat top_right_v = 1.0f;
 
 				GLfloat top_left_x = x;
 				GLfloat top_left_y = y;
 				GLfloat top_left_z = z;
+				GLfloat top_left_u = 0.0f;
+				GLfloat top_left_v = 1.0f;
 
 				if ((i % 2 != 0 && j % 2 != 0) || (i % 2 == 0 && j % 2 == 0))
 				{
 					vec.push_back(bottom_left_x);
 					vec.push_back(bottom_left_y);
 					vec.push_back(bottom_left_z);
+					vec.push_back(bottom_left_u);
+					vec.push_back(bottom_left_v);
 					vec.push_back(bottom_right_x);
 					vec.push_back(bottom_right_y);
 					vec.push_back(bottom_right_z);
+					vec.push_back(bottom_right_u);
+					vec.push_back(bottom_right_v);
 					vec.push_back(top_right_x);
 					vec.push_back(top_right_y);
 					vec.push_back(top_right_z);
+					vec.push_back(top_right_u);
+					vec.push_back(top_right_v);
 					vec.push_back(top_left_x);
 					vec.push_back(top_left_y);
 					vec.push_back(top_left_z);
+					vec.push_back(top_left_u);
+					vec.push_back(top_left_v);
 				}
 				else
 				{
 					vec2.push_back(bottom_left_x);
 					vec2.push_back(bottom_left_y);
 					vec2.push_back(bottom_left_z);
+					vec2.push_back(bottom_left_u);
+					vec2.push_back(bottom_left_v);
 					vec2.push_back(bottom_right_x);
 					vec2.push_back(bottom_right_y);
 					vec2.push_back(bottom_right_z);
+					vec2.push_back(bottom_right_u);
+					vec2.push_back(bottom_right_v);
 					vec2.push_back(top_right_x);
 					vec2.push_back(top_right_y);
 					vec2.push_back(top_right_z);
+					vec2.push_back(top_right_u);
+					vec2.push_back(top_right_v);
 					vec2.push_back(top_left_x);
 					vec2.push_back(top_left_y);
 					vec2.push_back(top_left_z);
+					vec2.push_back(top_left_u);
+					vec2.push_back(top_left_v);
 				}
 
 				x = x + length_value_row;
@@ -211,7 +245,7 @@ namespace opengles_workspace
 		}
 	}
 
-	void GLFWRenderer::draw(std::vector<GLfloat> &vertices, std::vector<GLfloat> color)
+	void GLFWRenderer::draw_with_texture(std::vector<GLfloat> &vertices, char *textureFileLoc)
 	{
 
 		GLuint vertexShader, fragmentShader, shaderProgram;
@@ -220,6 +254,9 @@ namespace opengles_workspace
 		vertexShader = glCreateShader(GL_VERTEX_SHADER);
 		fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
 		shaderProgram = glCreateProgram();
+
+		texture = Texture(textureFileLoc);
+		texture.LoadTexture();
 
 		glShaderSource(vertexShader, 1, &vShaderStr, NULL);
 		glCompileShader(vertexShader);
@@ -245,9 +282,11 @@ namespace opengles_workspace
 		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
 
 		// Configure the Vertex Attribute so that OpenGL knows how to read the VBO
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)0);
 		// Enable the Vertex Attribute so that OpenGL knows to use it
 		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(vertices[0]), (void *)(sizeof(vertices[0]) * 3));
+		glEnableVertexAttribArray(1);
 		// Bind both the VBO and VAO to 0 so that we don't accidentally modify the VAO and VBO we created
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		glBindVertexArray(0);
@@ -256,16 +295,22 @@ namespace opengles_workspace
 		// Tell OpenGL which Shader Program we want to use
 		glUseProgram(shaderProgram);
 
-		GLint colorLoc = glGetUniformLocation(shaderProgram, "uniformColor");
-		if (!checkUniformLocationError(colorLoc, "uniformColor"))
-		{
-			// Handle the error
-		}
-		glUniform4f(colorLoc, color[0], color[1], color[2], color[3]);
+		// GLint colorLoc = glGetUniformLocation(shaderProgram, "uniformColor");
+		// if (!checkUniformLocationError(colorLoc, "uniformColor"))
+		// {
+		// 	// Handle the error
+		// }
+		// glUniform4f(colorLoc, color[0], color[1], color[2], color[3]);
+
+		texture.UseTexture();
 
 		glBindVertexArray(VAO);
 
 		glDrawArrays(GL_QUADS, 0, vertices_per_square * (nr_squares / 2 + 1)); // added an extra 1 in case nr_squares is odd number
+
+		
+		// glDrawArrays(GL_QUADS, 0, 4);
+
 
 		// Delete all the objects we've created
 		glDeleteVertexArrays(1, &VAO);
