@@ -1,20 +1,20 @@
 
-#include <renderer.hpp>
-#include <exception.hpp>
 #include "Texture.h"
+#include <exception.hpp>
+#include <renderer.hpp>
 
+#include <array>
+#include <cassert>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
 #include <memory>
 #include <optional>
-#include <cassert>
-#include <array>
-#include <iostream>
-#include <fstream>
 #include <sstream>
 #include <string>
 
 #include <glad/gl.h>
 #define GLFW_INCLUDE_NONE
-#include <GLFW/glfw3.h>
 
 namespace opengles_workspace
 {
@@ -27,7 +27,8 @@ namespace opengles_workspace
 		"out vec2 TexCoord;  \n"
 		"void main()                              \n"
 		"{                                        \n"
-		"   gl_Position = vec4(vPosition.x, vPosition.y, vPosition.z, 1.0);              \n"
+		"   gl_Position =vec4(vPosition.x,vPosition.y,vPosition.z, 1.0);           "
+		"   \n"
 		"   TexCoord = tex;              \n"
 		"}                                        \n";
 
@@ -45,122 +46,65 @@ namespace opengles_workspace
 
 	std::vector<GLfloat> vVertices_first_vector{};
 	std::vector<GLfloat> vVertices_second_vector{};
-	size_t nr_squares;
-	const size_t vertices_per_square = 4;
+	std::vector<GLfloat> vVertices_single_square_vector{
+		-0.1f,-0.1f,0.0f,0.0f,0.0f,
+		0.1f,-0.1f,0.0f,1.0f,0.0f,
+		0.1f,0.1f,0.0f,1.0f,1.0f,
+		-0.1f,0.1f,0.0f,0.0f,1.0f,
+	};
 
 	Texture texture;
 
 	GLFWRenderer::GLFWRenderer(std::shared_ptr<Context> context)
-		: mContext(std::move(context))
-	{
-	}
-
-	bool GLFWRenderer::checkProgramStatus(GLuint programId)
-	{
-		GLint linked;
-		glGetProgramiv(programId, GL_LINK_STATUS, &linked);
-
-		if (!linked)
-		{
-			GLint infoLength = 0;
-			glGetProgramiv(programId, GL_INFO_LOG_LENGTH, &infoLength);
-
-			if (infoLength > 1)
-			{
-				char *infoLog = new char[infoLength];
-				glGetProgramInfoLog(programId, infoLength, NULL, infoLog);
-				std::cerr << "Error linking program: " << infoLog << std::endl;
-				delete[] infoLog;
-			}
-
-			return false;
-		}
-
-		return true;
-	}
-
-	bool GLFWRenderer::checkUniformLocationError(GLint location, const char *variableName)
-	{
-		if (location == -1)
-		{
-			std::cerr << "Error: Uniform variable '" << variableName << "' not found or inactive." << std::endl;
-			return false;
-		}
-		return true;
-	}
-
-	void GLFWRenderer::render()
+		: mContext(std::move(context)),
+		  vertexShader(glCreateShader(GL_VERTEX_SHADER)),
+		  fragmentShader(glCreateShader(GL_FRAGMENT_SHADER)),
+		  shaderProgram(glCreateProgram()), start_time_(GetCurrentTimeMillis())
 	{
 
-		std::vector<GLfloat> white_color = {1.0f, 1.0f, 1.0f, 1.0f};
-		std::vector<GLfloat> blue_color = {0.0f, 0.0f, 1.0f, 1.0f};
-		clear_back_buffer();
-		char *brick_texture = "/home/silviu/opengl-silviu/opengles-workspace/textures/brick.png";
-		char *dirt_texture = "/home/silviu/opengl-silviu/opengles-workspace/textures/dirt.png";
-		calculate_square_values(vVertices_first_vector, vVertices_second_vector);
-		draw_with_texture(vVertices_first_vector, brick_texture);
-		draw_with_texture(vVertices_second_vector, dirt_texture);
+		CompileShaders();
+		LinkProgram();
 
-		glfwSwapBuffers(window());
-	}
-	void GLFWRenderer::clear_back_buffer()
-	{
-		// Specify the color of the background
-		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-		// Clean the back buffer and assign the new color to it
-		glClear(GL_COLOR_BUFFER_BIT);
-	}
-
-	bool GLFWRenderer::readNumbersFromFile(const std::string &filename, int &num1, int &num2)
-	{
-		std::ifstream file(filename);
-		if (!file.is_open())
-		{
-			std::cerr << "Error: Unable to open file " << filename << std::endl;
-			return false;
-		}
-
-		std::string line;
-		if (std::getline(file, line))
-		{
-			std::istringstream iss(line);
-			char comma;
-			if (iss >> num1 >> comma >> num2)
-			{
-				if (comma != ',')
-				{
-					std::cerr << "Error: Expected comma delimiter" << std::endl;
-					return false;
-				}
-				return true;
-			}
-			else
-			{
-				std::cerr << "Error: Unable to read numbers from line" << std::endl;
-				return false;
-			}
-		}
-		else
-		{
-			std::cerr << "Error: File is empty" << std::endl;
-			return false;
-		}
-	}
-
-	void GLFWRenderer::calculate_square_values(std::vector<GLfloat> &vec, std::vector<GLfloat> &vec2)
-	{
 		std::string filename = "/home/silviu/opengl-silviu/opengles-workspace/src/numbers.txt";
+		brick_texture_ = "/home/silviu/opengl-silviu/opengles-workspace/textures/brick.png";
+		ReadNumbersFromFile(filename, rows_from_file_, columns_from_file_);
+
+		glDeleteShader(vertexShader);
+		glDeleteShader(fragmentShader);
+	}
+
+	void GLFWRenderer::CompileShaders()
+	{
+
+		glShaderSource(vertexShader, 1, &vShaderStr, NULL);
+		glCompileShader(vertexShader);
+
+		glShaderSource(fragmentShader, 1, &fShaderStr, NULL);
+		glCompileShader(fragmentShader);
+	}
+
+	void GLFWRenderer::LinkProgram()
+	{
+
+		glAttachShader(shaderProgram, vertexShader);
+		glAttachShader(shaderProgram, fragmentShader);
+		glLinkProgram(shaderProgram);
+		// checkProgramStatus(shaderProgram);
+	}
+
+	void GLFWRenderer::CalculateSquareValues(std::vector<GLfloat> &vec,
+											 std::vector<GLfloat> &vec2)
+	{
+
 		GLfloat x = -1.0f;
 		GLfloat y = 1.0f;
 		GLfloat z = 0.0f;
-		int rows_from_file;
-		int columns_from_file;
-		readNumbersFromFile(filename, rows_from_file, columns_from_file);
-		GLfloat length_value_row = 2.0f / columns_from_file;
-		GLfloat length_value_column = 2.0f / rows_from_file;
-		nr_squares = rows_from_file * columns_from_file;
-		const int nr_rows = nr_squares / rows_from_file;
-		const int nr_columns = nr_squares / columns_from_file;
+
+		GLfloat length_value_row = 2.0f / columns_from_file_;
+		GLfloat length_value_column = 2.0f / rows_from_file_;
+		nr_squares_ = rows_from_file_ * columns_from_file_;
+		const int nr_rows = nr_squares_ / rows_from_file_;
+		const int nr_columns = nr_squares_ / columns_from_file_;
 
 		for (int i = 1; i <= nr_columns; i++)
 		{
@@ -245,85 +189,175 @@ namespace opengles_workspace
 		}
 	}
 
-	void GLFWRenderer::draw_with_texture(std::vector<GLfloat> &vertices, char *textureFileLoc)
+	void GLFWRenderer::render()
 	{
 
-		GLuint vertexShader, fragmentShader, shaderProgram;
+		ClearBackBuffer();
+		DrawWithTexture(vVertices_single_square_vector, brick_texture_);
 
-		// Initialize the shaders and the program
-		vertexShader = glCreateShader(GL_VERTEX_SHADER);
-		fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-		shaderProgram = glCreateProgram();
+		glfwSwapBuffers(window());
+	}
+	void GLFWRenderer::ClearBackBuffer()
+	{
+		// Specify the color of the background
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		// Clean the back buffer and assign the new color to it
+		glClear(GL_COLOR_BUFFER_BIT);
+	}
+
+	void GLFWRenderer::DrawWithTexture(std::vector<GLfloat> &vertices,
+									   char *textureFileLoc)
+	{
 
 		texture = Texture(textureFileLoc);
 		texture.LoadTexture();
 
-		glShaderSource(vertexShader, 1, &vShaderStr, NULL);
-		glCompileShader(vertexShader);
-
-		glShaderSource(fragmentShader, 1, &fShaderStr, NULL);
-		glCompileShader(fragmentShader);
-
-		glAttachShader(shaderProgram, vertexShader);
-		glAttachShader(shaderProgram, fragmentShader);
-		glLinkProgram(shaderProgram);
-
-		glDeleteShader(vertexShader);
-		glDeleteShader(fragmentShader);
-
-		// Create reference containers for VAO and VBO
-		GLuint VAO, VBO;
-
 		glGenVertexArrays(1, &VAO);
 		glGenBuffers(1, &VBO);
 		glBindVertexArray(VAO);
-
 		glBindBuffer(GL_ARRAY_BUFFER, VBO);
-		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float),
+					 vertices.data(), GL_STATIC_DRAW);
 
-		// Configure the Vertex Attribute so that OpenGL knows how to read the VBO
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)0);
-		// Enable the Vertex Attribute so that OpenGL knows to use it
 		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(vertices[0]), (void *)(sizeof(vertices[0]) * 3));
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(vertices[0]),
+							  (void *)(sizeof(vertices[0]) * 3));
 		glEnableVertexAttribArray(1);
-		// Bind both the VBO and VAO to 0 so that we don't accidentally modify the VAO and VBO we created
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		glBindVertexArray(0);
 		// GL code begin
 
-		// Tell OpenGL which Shader Program we want to use
 		glUseProgram(shaderProgram);
-
-		// GLint colorLoc = glGetUniformLocation(shaderProgram, "uniformColor");
-		// if (!checkUniformLocationError(colorLoc, "uniformColor"))
-		// {
-		// 	// Handle the error
-		// }
-		// glUniform4f(colorLoc, color[0], color[1], color[2], color[3]);
-
 		texture.UseTexture();
 
 		glBindVertexArray(VAO);
 
-		glDrawArrays(GL_QUADS, 0, vertices_per_square * (nr_squares / 2 + 1)); // added an extra 1 in case nr_squares is odd number
-
-		
-		// glDrawArrays(GL_QUADS, 0, 4);
-
+		glDrawArrays(GL_QUADS, 0,
+					 kVerticesPerSquare *
+						 (nr_squares_ / 2 +
+						  1)); // added an extra 1 in case nr_squares is odd number
 
 		// Delete all the objects we've created
 		glDeleteVertexArrays(1, &VAO);
 		glDeleteBuffers(1, &VBO);
 		glDeleteProgram(shaderProgram);
 	}
-	bool GLFWRenderer::poll()
+
+	void GLFWRenderer::IncrementYCoordinate(std::vector<GLfloat> &vertices,
+											float offset)
 	{
-		if (glfwWindowShouldClose(window()))
+		vertices[1] += offset;
+		vertices[6] += offset;
+		vertices[11] += offset;
+		vertices[16] += offset;
+	}
+
+	void GLFWRenderer::DecrementYCoordinate(std::vector<GLfloat> &vertices,
+											float offset)
+	{
+		vertices[1] -= offset;
+		vertices[6] -= offset;
+		vertices[11] -= offset;
+		vertices[16] -= offset;
+	}
+
+	bool GLFWRenderer::CheckProgramStatus(GLuint programId)
+	{
+		GLint linked;
+		glGetProgramiv(programId, GL_LINK_STATUS, &linked);
+
+		if (!linked)
 		{
+			GLint infoLength = 0;
+			glGetProgramiv(programId, GL_INFO_LOG_LENGTH, &infoLength);
+
+			if (infoLength > 1)
+			{
+				char *infoLog = new char[infoLength];
+				glGetProgramInfoLog(programId, infoLength, NULL, infoLog);
+				std::cerr << "Error linking program: " << infoLog << std::endl;
+				delete[] infoLog;
+			}
+
+			return false;
+		}
+
+		return true;
+	}
+
+	bool GLFWRenderer::CheckUniformLocationError(GLint location,
+												 const char *variableName)
+	{
+		if (location == -1)
+		{
+			std::cerr << "Error: Uniform variable '" << variableName
+					  << "' not found or inactive." << std::endl;
 			return false;
 		}
 		return true;
 	}
 
-}
+	bool GLFWRenderer::ReadNumbersFromFile(const std::string &filename, int &num1,
+										   int &num2)
+	{
+		std::ifstream file(filename);
+		if (!file.is_open())
+		{
+			std::cerr << "Error: Unable to open file " << filename << std::endl;
+			return false;
+		}
+
+		std::string line;
+		if (std::getline(file, line))
+		{
+			std::istringstream iss(line);
+			char comma;
+			if (iss >> num1 >> comma >> num2)
+			{
+				if (comma != ',')
+				{
+					std::cerr << "Error: Expected comma delimiter" << std::endl;
+					return false;
+				}
+				return true;
+			}
+			else
+			{
+				std::cerr << "Error: Unable to read numbers from line" << std::endl;
+				return false;
+			}
+		}
+		else
+		{
+			std::cerr << "Error: File is empty" << std::endl;
+			return false;
+		}
+	}
+
+	long long GLFWRenderer::GetCurrentTimeMillis()
+	{
+		return std::chrono::duration_cast<std::chrono::milliseconds>(
+				   std::chrono::system_clock::now().time_since_epoch())
+			.count();
+	}
+
+	bool GLFWRenderer::poll()
+	{
+		long long current_time = GetCurrentTimeMillis();
+		float elapsed_time = (current_time - start_time_) / 1000.0f;
+		int target_fps = 4;
+		bool reached_limit = false;
+
+		if (elapsed_time >= 1.0f / target_fps)
+		{
+
+			render();
+
+			start_time_ = current_time;
+		}
+
+		return true;
+	}
+
+} // namespace opengles_workspace
