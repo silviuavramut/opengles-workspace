@@ -1,8 +1,9 @@
 
-#include "Texture.h"
+#include <texture.hpp>
 #include <exception.hpp>
 #include <renderer.hpp>
 #include <fps.hpp>
+#include <shader.hpp>
 
 #include <array>
 #include <cassert>
@@ -21,31 +22,10 @@ namespace opengles_workspace
 {
 
 	// Shader Sources
-	const char *vShaderStr =
-		"#version 300 es                          \n"
-		"layout(location = 0) in vec4 vPosition;  \n"
-		"layout(location = 1) in vec2 tex;  \n"
-		"out vec2 TexCoord;  \n"
-		"void main()                              \n"
-		"{                                        \n"
-		"   gl_Position =vec4(vPosition.x,vPosition.y,vPosition.z, 1.0);           "
-		"   \n"
-		"   TexCoord = tex;              \n"
-		"}                                        \n";
+	const char *vShaderStr = "/home/silviu/opengl-silviu/opengles-workspace/shaders/shader.vert";
 
-	const char *fShaderStr =
-		"#version 300 es                              \n"
-		"precision mediump float;                       \n"
-		"uniform vec4 uniformColor;                        \n"
-		"uniform sampler2D theTexture;                        \n"
-		"in vec2 TexCoord;                        \n"
-		"out vec4 FragColor;                          \n"
-		"void main()                                  \n"
-		"{                                            \n"
-		"   FragColor = texture(theTexture, TexCoord);  \n"
-		"}                                            \n";
+	const char *fShaderStr = "/home/silviu/opengl-silviu/opengles-workspace/shaders/shader.frag";
 
-	std::vector<GLfloat> vVertices_first_vector{};
 	std::vector<GLfloat> vVertices_second_vector{};
 	std::vector<GLfloat> vVertices_single_square_vector{
 		-0.5f,0.0f,0.0f,0.0f,0.0f,
@@ -54,17 +34,17 @@ namespace opengles_workspace
 		-0.5f,0.5f,0.0f,0.0f,1.0f,
 	};
 	std::vector<std::vector<int>> myMatrix;
-	Texture texture;
+	texture texture_instance;
 	fps fps_instance;
+	shader shader_instance;
 
 	GLFWRenderer::GLFWRenderer(std::shared_ptr<Context> context)
 		: mContext(std::move(context)),
-		  vertexShader(glCreateShader(GL_VERTEX_SHADER)),
-		  fragmentShader(glCreateShader(GL_FRAGMENT_SHADER)),
 		  shaderProgram(glCreateProgram())
 	{
+		vertexShader = shader_instance.LoadShader(vShaderStr, GL_VERTEX_SHADER);
+		fragmentShader = shader_instance.LoadShader(fShaderStr, GL_FRAGMENT_SHADER);
 
-		CompileShaders();
 		LinkProgram();
 		glViewport(0, 0, 800, 800);
 		
@@ -78,23 +58,13 @@ namespace opengles_workspace
 		glDeleteShader(fragmentShader);
 	}
 
-	void GLFWRenderer::CompileShaders()
-	{
-
-		glShaderSource(vertexShader, 1, &vShaderStr, NULL);
-		glCompileShader(vertexShader);
-
-		glShaderSource(fragmentShader, 1, &fShaderStr, NULL);
-		glCompileShader(fragmentShader);
-	}
-
 	void GLFWRenderer::LinkProgram()
 	{
 
 		glAttachShader(shaderProgram, vertexShader);
 		glAttachShader(shaderProgram, fragmentShader);
 		glLinkProgram(shaderProgram);
-		// checkProgramStatus(shaderProgram);
+
 	}
 
 	void GLFWRenderer::CalculateSquareValues(std::vector<GLfloat> &vec, std::vector<GLfloat> &vec2)
@@ -213,8 +183,8 @@ namespace opengles_workspace
 									   char *textureFileLoc)
 	{
 
-		texture = Texture(textureFileLoc);
-		texture.LoadTexture();
+		texture_instance = texture(textureFileLoc);
+		texture_instance.LoadTexture();
 
 		glGenVertexArrays(1, &VAO);
 		glGenBuffers(1, &VBO);
@@ -231,7 +201,8 @@ namespace opengles_workspace
 		// GL code begin
 
 		glUseProgram(shaderProgram);
-		texture.UseTexture();
+
+		texture_instance.UseTexture();
 
 		glBindVertexArray(VAO);
 
@@ -445,7 +416,7 @@ namespace opengles_workspace
 	{
 		long long current_time = fps_instance.GetCurrentTimeMillis();
 		float elapsed_time = (current_time - fps_instance.GetStartTime()) / 1000.0f;
-		int target_fps = 60;
+		int target_fps = 1;
 
 		if (elapsed_time >= 1.0f / target_fps)
 		{
@@ -465,15 +436,15 @@ namespace opengles_workspace
 			{
 				IncrementYCoordinate(vVertices_single_square_vector, 0.5f); // patratu x y
 				MoveOneUp(myMatrix); // 
-				std::cout<<"if" << std::endl;
-				printMatrix(myMatrix);
+				//std::cout<<"if" << std::endl;
+				//printMatrix(myMatrix);
 			}
 			else
 			{
 				DecrementYCoordinate(vVertices_single_square_vector, 0.5f);
 				MoveOneDown(myMatrix);
-				std::cout<<"else" << std::endl;
-				printMatrix(myMatrix);
+				//std::cout<<"else" << std::endl;
+				//printMatrix(myMatrix);
 			}
 
 			fps_instance.SetStartTime(current_time);

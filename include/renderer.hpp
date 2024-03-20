@@ -25,7 +25,6 @@ namespace opengles_workspace
 
 	private:
 		//OpenGL functions 
-		void CompileShaders();
 		void LinkProgram();
 
 		//Functions that work with coordinates
@@ -41,7 +40,6 @@ namespace opengles_workspace
 		bool CheckProgramStatus(GLuint programId);
 		bool CheckUniformLocationError(GLint location, const char *variableName);
 		bool ReadNumbersFromFile(const std::string &filename, int &num1, int &num2);
-
 
 		//Game functions
 		std::vector<std::vector<int>> initializeMatrix(int rows, int columns);

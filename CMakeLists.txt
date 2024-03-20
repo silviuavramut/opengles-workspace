@@ -11,9 +11,10 @@ add_library(opengles-workspace_lib STATIC
     src/main_loop.cpp
     src/renderer.cpp
     src/input.cpp
-    src/Texture.cpp
+    src/texture.cpp
     src/game.cpp
     src/fps.cpp
+    src/shader.cpp
     third_party/glad/GL/src/gl.c
     )
 
