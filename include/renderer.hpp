@@ -1,5 +1,5 @@
 #pragma once
-#include <chrono>
+
 #include <context.hpp>
 #include <memory>
 #include <optional>
@@ -41,17 +41,25 @@ namespace opengles_workspace
 		bool CheckProgramStatus(GLuint programId);
 		bool CheckUniformLocationError(GLint location, const char *variableName);
 		bool ReadNumbersFromFile(const std::string &filename, int &num1, int &num2);
-		long long GetCurrentTimeMillis();
+
+
+		//Game functions
+		std::vector<std::vector<int>> initializeMatrix(int rows, int columns);
+		void MoveOneDown(std::vector<std::vector<int>> &matrix);
+		void MoveOneUp(std::vector<std::vector<int>> &matrix);
+		bool CheckLastRowForOne(const std::vector<std::vector<int>> &matrix);
+		bool CheckFirstRowForOne(const std::vector<std::vector<int>> &matrix);
 
 		GLuint vertexShader, fragmentShader, shaderProgram;
 		GLuint VAO, VBO;
 
 		const size_t kVerticesPerSquare = 4;
-		long long start_time_;
+	
 		size_t nr_squares_;
 		int rows_from_file_;
 		int columns_from_file_;
 		char *brick_texture_;
+		bool lower_limit_reached_;
 
 		std::shared_ptr<Context> mContext;
 		GLFWwindow *window() const

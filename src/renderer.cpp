@@ -2,6 +2,7 @@
 #include "Texture.h"
 #include <exception.hpp>
 #include <renderer.hpp>
+#include <fps.hpp>
 
 #include <array>
 #include <cassert>
@@ -47,27 +48,31 @@ namespace opengles_workspace
 	std::vector<GLfloat> vVertices_first_vector{};
 	std::vector<GLfloat> vVertices_second_vector{};
 	std::vector<GLfloat> vVertices_single_square_vector{
-		-0.1f,-0.1f,0.0f,0.0f,0.0f,
-		0.1f,-0.1f,0.0f,1.0f,0.0f,
-		0.1f,0.1f,0.0f,1.0f,1.0f,
-		-0.1f,0.1f,0.0f,0.0f,1.0f,
+		-0.5f,0.0f,0.0f,0.0f,0.0f,
+		0.0f,0.0f,0.0f,1.0f,0.0f,
+		0.0f,0.5f,0.0f,1.0f,1.0f,
+		-0.5f,0.5f,0.0f,0.0f,1.0f,
 	};
-
+	std::vector<std::vector<int>> myMatrix;
 	Texture texture;
+	fps fps_instance;
 
 	GLFWRenderer::GLFWRenderer(std::shared_ptr<Context> context)
 		: mContext(std::move(context)),
 		  vertexShader(glCreateShader(GL_VERTEX_SHADER)),
 		  fragmentShader(glCreateShader(GL_FRAGMENT_SHADER)),
-		  shaderProgram(glCreateProgram()), start_time_(GetCurrentTimeMillis())
+		  shaderProgram(glCreateProgram())
 	{
 
 		CompileShaders();
 		LinkProgram();
-
+		glViewport(0, 0, 800, 800);
+		
 		std::string filename = "/home/silviu/opengl-silviu/opengles-workspace/src/numbers.txt";
 		brick_texture_ = "/home/silviu/opengl-silviu/opengles-workspace/textures/brick.png";
 		ReadNumbersFromFile(filename, rows_from_file_, columns_from_file_);
+		myMatrix = initializeMatrix(rows_from_file_, columns_from_file_);
+		lower_limit_reached_ = false;
 
 		glDeleteShader(vertexShader);
 		glDeleteShader(fragmentShader);
@@ -92,8 +97,7 @@ namespace opengles_workspace
 		// checkProgramStatus(shaderProgram);
 	}
 
-	void GLFWRenderer::CalculateSquareValues(std::vector<GLfloat> &vec,
-											 std::vector<GLfloat> &vec2)
+	void GLFWRenderer::CalculateSquareValues(std::vector<GLfloat> &vec, std::vector<GLfloat> &vec2)
 	{
 
 		GLfloat x = -1.0f;
@@ -216,13 +220,11 @@ namespace opengles_workspace
 		glGenBuffers(1, &VBO);
 		glBindVertexArray(VAO);
 		glBindBuffer(GL_ARRAY_BUFFER, VBO);
-		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float),
-					 vertices.data(), GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
 
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)0);
 		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(vertices[0]),
-							  (void *)(sizeof(vertices[0]) * 3));
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(vertices[0]), (void *)(sizeof(vertices[0]) * 3));
 		glEnableVertexAttribArray(1);
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		glBindVertexArray(0);
@@ -233,10 +235,7 @@ namespace opengles_workspace
 
 		glBindVertexArray(VAO);
 
-		glDrawArrays(GL_QUADS, 0,
-					 kVerticesPerSquare *
-						 (nr_squares_ / 2 +
-						  1)); // added an extra 1 in case nr_squares is odd number
+		glDrawArrays(GL_QUADS, 0, kVerticesPerSquare * (nr_squares_ / 2 + 1)); // added an extra 1 in case nr_squares_ is odd number
 
 		// Delete all the objects we've created
 		glDeleteVertexArrays(1, &VAO);
@@ -244,8 +243,7 @@ namespace opengles_workspace
 		glDeleteProgram(shaderProgram);
 	}
 
-	void GLFWRenderer::IncrementYCoordinate(std::vector<GLfloat> &vertices,
-											float offset)
+	void GLFWRenderer::IncrementYCoordinate(std::vector<GLfloat> &vertices, float offset)
 	{
 		vertices[1] += offset;
 		vertices[6] += offset;
@@ -253,8 +251,7 @@ namespace opengles_workspace
 		vertices[16] += offset;
 	}
 
-	void GLFWRenderer::DecrementYCoordinate(std::vector<GLfloat> &vertices,
-											float offset)
+	void GLFWRenderer::DecrementYCoordinate(std::vector<GLfloat> &vertices, float offset)
 	{
 		vertices[1] -= offset;
 		vertices[6] -= offset;
@@ -286,8 +283,7 @@ namespace opengles_workspace
 		return true;
 	}
 
-	bool GLFWRenderer::CheckUniformLocationError(GLint location,
-												 const char *variableName)
+	bool GLFWRenderer::CheckUniformLocationError(GLint location, const char *variableName)
 	{
 		if (location == -1)
 		{
@@ -298,8 +294,7 @@ namespace opengles_workspace
 		return true;
 	}
 
-	bool GLFWRenderer::ReadNumbersFromFile(const std::string &filename, int &num1,
-										   int &num2)
+	bool GLFWRenderer::ReadNumbersFromFile(const std::string &filename, int &num1, int &num2)
 	{
 		std::ifstream file(filename);
 		if (!file.is_open())
@@ -335,26 +330,153 @@ namespace opengles_workspace
 		}
 	}
 
-	long long GLFWRenderer::GetCurrentTimeMillis()
+
+	std::vector<std::vector<int>> GLFWRenderer::initializeMatrix(int rows, int columns)
 	{
-		return std::chrono::duration_cast<std::chrono::milliseconds>(
-				   std::chrono::system_clock::now().time_since_epoch())
-			.count();
+		std::vector<std::vector<int>> matrix(rows, std::vector<int>(columns, 0)); // Initialize matrix with zeros
+
+		// Set value at [1][1] index to 1 (assuming 0-based indexing)
+		if (rows > 1 && columns > 1)
+		{
+			matrix[1][1] = 1;
+		}
+		else
+		{
+			std::cout << "Matrix dimensions should be greater than 1x1.\n";
+		}
+
+		return matrix;
 	}
 
+	void GLFWRenderer::MoveOneDown(std::vector<std::vector<int>> &matrix)
+	{
+		int rows = matrix.size();
+		int cols = matrix[0].size();
+
+		for (int i = 0; i < rows; ++i)
+		{
+			for (int j = 0; j < cols; ++j)
+			{
+				if (matrix[i][j] == 1)
+				{
+					if (i >= 0)
+					{ // Move up a row if possible
+						matrix[i][j] = 0;
+						matrix[i + 1][j] = 1;
+						return;
+					}
+				}
+			}
+		}
+	}
+
+	void GLFWRenderer::MoveOneUp(std::vector<std::vector<int>> &matrix)
+	{
+		int rows = matrix.size();
+		int cols = matrix[0].size();
+
+		for (int i = 0; i < rows; ++i)
+		{
+			for (int j = 0; j < cols; ++j)
+			{
+				if (matrix[i][j] == 1)
+				{
+					if (i > 0)
+					{ // Move up a row if possible
+						matrix[i][j] = 0;
+						matrix[i - 1][j] = 1;
+						return;
+					}
+				}
+			}
+		}
+	}
+
+	void printMatrix(const std::vector<std::vector<int>> &matrix)
+	{
+		// Get the number of rows and columns in the matrix
+		int rows = matrix.size();
+		int columns = matrix[0].size();
+
+		// Print each element of the matrix
+		for (int i = 0; i < rows; ++i)
+		{
+			for (int j = 0; j < columns; ++j)
+			{
+				std::cout << matrix[i][j] << " ";
+			}
+			std::cout << std::endl;
+		}
+	}
+
+	bool GLFWRenderer::CheckLastRowForOne(const std::vector<std::vector<int>> &matrix)
+	{
+		int rows = matrix.size();
+		int cols = matrix[0].size();
+
+		for (int j = 0; j < cols; ++j)
+		{
+			if (matrix[rows - 1][j] == 1)
+			{
+				return true; // If 1 is found in the last row, return true
+			}
+		}
+
+		return false; // If 1 is not found in the last row, return false
+	}
+
+	bool GLFWRenderer::CheckFirstRowForOne(const std::vector<std::vector<int>> &matrix)
+	{
+		int rows = matrix.size();
+		int cols = matrix[0].size();
+
+		for (int j = 0; j < cols; ++j)
+		{
+			if (matrix[0][j] == 1)
+			{
+				return true; // If 1 is found in the last row, return true
+			}
+		}
+
+		return false; // If 1 is not found in the last row, return false
+	}
+	
 	bool GLFWRenderer::poll()
 	{
-		long long current_time = GetCurrentTimeMillis();
-		float elapsed_time = (current_time - start_time_) / 1000.0f;
-		int target_fps = 4;
-		bool reached_limit = false;
+		long long current_time = fps_instance.GetCurrentTimeMillis();
+		float elapsed_time = (current_time - fps_instance.GetStartTime()) / 1000.0f;
+		int target_fps = 60;
 
 		if (elapsed_time >= 1.0f / target_fps)
 		{
 
 			render();
 
-			start_time_ = current_time;
+			if (CheckLastRowForOne(myMatrix))
+			{
+				lower_limit_reached_ = true;
+			}
+			else if (CheckFirstRowForOne(myMatrix))
+			{
+				lower_limit_reached_ = false;
+			}
+
+			if (lower_limit_reached_)
+			{
+				IncrementYCoordinate(vVertices_single_square_vector, 0.5f); // patratu x y
+				MoveOneUp(myMatrix); // 
+				std::cout<<"if" << std::endl;
+				printMatrix(myMatrix);
+			}
+			else
+			{
+				DecrementYCoordinate(vVertices_single_square_vector, 0.5f);
+				MoveOneDown(myMatrix);
+				std::cout<<"else" << std::endl;
+				printMatrix(myMatrix);
+			}
+
+			fps_instance.SetStartTime(current_time);
 		}
 
 		return true;
