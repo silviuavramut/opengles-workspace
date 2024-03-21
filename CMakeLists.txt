@@ -15,6 +15,7 @@ add_library(opengles-workspace_lib STATIC
     src/game.cpp
     src/fps.cpp
     src/shader.cpp
+    src/helper.cpp
     third_party/glad/GL/src/gl.c
     )
 
