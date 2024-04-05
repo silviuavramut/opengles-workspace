@@ -23,7 +23,7 @@
 namespace opengles_workspace
 {
 
-	std::vector<std::vector<int>> game_matrix;
+
 	texture texture_instance;
 	fps fps_instance;
 	shader shader_instance;
@@ -43,7 +43,16 @@ namespace opengles_workspace
 
 		helper_instance.ReadNumbersFromFile(filename, rows_from_file_, columns_from_file_);
 		game_matrix = game_state.initializeMatrix(rows_from_file_, columns_from_file_);
-		lower_limit_reached_ = false;
+
+
+		cell_width = 2.0f / columns_from_file_;
+		cell_height = 2.0f /  rows_from_file_;
+
+		square_vertices_vector = helper_instance.CalculateSquareVertices(game_matrix,cell_width,cell_height);
+
+
+		horizontal_offset_ = 2.0f / rows_from_file_;
+		vertical_offset_ = 2.0f / columns_from_file_;
 
 		glDeleteShader(vertexShader);
 		glDeleteShader(fragmentShader);
@@ -62,7 +71,7 @@ namespace opengles_workspace
 	{
 
 		ClearBackBuffer();
-		DrawWithTexture(vVertices_single_square_vector, brick_texture_);
+		DrawWithTexture(square_vertices_vector, brick_texture_);
 
 		glfwSwapBuffers(window());
 	}
@@ -86,11 +95,11 @@ namespace opengles_workspace
 		glGenBuffers(1, &VBO);
 		glBindVertexArray(VAO);
 		glBindBuffer(GL_ARRAY_BUFFER, VBO);
-		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, square_vertices_vector.size() * sizeof(float), square_vertices_vector.data(), GL_STATIC_DRAW);
 
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)0);
 		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(vertices[0]), (void *)(sizeof(vertices[0]) * 3));
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(square_vertices_vector[0]), (void *)(sizeof(square_vertices_vector[0]) * 3));
 		glEnableVertexAttribArray(1);
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		glBindVertexArray(0);
@@ -102,7 +111,7 @@ namespace opengles_workspace
 
 		glBindVertexArray(VAO);
 
-		glDrawArrays(GL_QUADS, 0, kVerticesPerSquare * (nr_squares_ / 2 + 1)); // added an extra 1 in case nr_squares_ is odd number
+		glDrawArrays(GL_QUADS, 0, kVerticesPerSquare * 100 ); 
 
 		// Delete all the objects we've created
 		glDeleteVertexArrays(1, &VAO);
@@ -110,21 +119,6 @@ namespace opengles_workspace
 		glDeleteProgram(shaderProgram);
 	}
 
-	void GLFWRenderer::IncrementYCoordinate(std::vector<GLfloat> &vertices, float offset)
-	{
-		vertices[1] += offset;
-		vertices[6] += offset;
-		vertices[11] += offset;
-		vertices[16] += offset;
-	}
-
-	void GLFWRenderer::DecrementYCoordinate(std::vector<GLfloat> &vertices, float offset)
-	{
-		vertices[1] -= offset;
-		vertices[6] -= offset;
-		vertices[11] -= offset;
-		vertices[16] -= offset;
-	}
 
 	bool GLFWRenderer::CheckProgramStatus(GLuint programId)
 	{
@@ -166,6 +160,7 @@ namespace opengles_workspace
 		// Get the number of rows and columns in the matrix
 		int rows = matrix.size();
 		int columns = matrix[0].size();
+		std::cout << "game matrix\n";
 
 		// Print each element of the matrix
 		for (int i = 0; i < rows; ++i)
@@ -177,42 +172,42 @@ namespace opengles_workspace
 			std::cout << std::endl;
 		}
 	}
-	
+	void printVector(const std::vector<GLfloat> &vec)
+	{
+		std::cout << "Vector Contents:" << std::endl;
+		for (size_t i = 0; i < vec.size(); ++i)
+		{
+			std::cout << "[" << i << "]: " << vec[i];
+			if ((i + 1) % 20 == 0 || i == vec.size() - 1)
+			{
+				std::cout << std::endl;
+			}
+			else
+			{
+				std::cout << " ";
+			}
+		}
+	}
+
+	void GLFWRenderer::AppendVertices(std::vector<GLfloat> &vertices, const std::vector<GLfloat> &newVertices)
+	{
+		// Iterate through newVertices and append each element to vertices
+		for (float vertex : newVertices)
+		{
+			vertices.push_back(vertex);
+		}
+	}
+
 	bool GLFWRenderer::poll()
 	{
 		long long current_time = fps_instance.GetCurrentTimeMillis();
 		float elapsed_time = (current_time - fps_instance.GetStartTime()) / 1000.0f;
-		int target_fps = 1;
+		int target_fps = 15;
 
 		if (elapsed_time >= 1.0f / target_fps)
 		{
-
+			square_vertices_vector = helper_instance.CalculateSquareVertices(game_matrix,cell_width,cell_height);
 			render();
-
-			if (game_state.CheckLastRowForOne(game_matrix))
-			{
-				lower_limit_reached_ = true;
-			}
-			else if (game_state.CheckFirstRowForOne(game_matrix))
-			{
-				lower_limit_reached_ = false;
-			}
-
-			if (lower_limit_reached_)
-			{
-				IncrementYCoordinate(vVertices_single_square_vector, 0.5f); 
-				game_state.MoveOneUp(game_matrix); // 
-				//std::cout<<"if" << std::endl;
-				//printMatrix(myMatrix);
-			}
-			else
-			{
-				DecrementYCoordinate(vVertices_single_square_vector, 0.5f);
-				game_state.MoveOneDown(game_matrix);
-				//std::cout<<"else" << std::endl;
-				//printMatrix(myMatrix);
-			}
-
 			fps_instance.SetStartTime(current_time);
 		}
 

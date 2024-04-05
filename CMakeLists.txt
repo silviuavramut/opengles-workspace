@@ -6,6 +6,13 @@ add_subdirectory(third_party/glad)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=c++17")
 
+
+include(FetchContent)
+FetchContent_Declare(
+  googletest
+  URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
+)
+
 add_library(opengles-workspace_lib STATIC 
     src/glfw_application.cpp
     src/main_loop.cpp
@@ -29,3 +36,23 @@ add_executable(opengles-workspace
 )
 
 target_link_libraries(opengles-workspace opengles-workspace_lib glfw ${GLFW_LIBRARIES})
+
+enable_testing()
+
+add_subdirectory(ext/googletest)
+
+add_executable(
+  testRunner
+  src/testRunner.cpp
+)
+target_link_libraries(
+  testRunner
+  GTest::gtest_main
+  gmock
+  opengles-workspace_lib
+)
+
+include(GoogleTest)
+
+gtest_discover_tests(testRunner)
+

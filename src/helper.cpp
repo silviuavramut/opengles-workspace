@@ -6,95 +6,50 @@ namespace opengles_workspace
     {
     }
 
-    // 	void helper::CalculateSquareValues(std::vector<GLfloat> &vec, std::vector<GLfloat> &vec2)
-    // {
+    std::vector<GLfloat> helper::CalculateSquareVertices(const std::vector<std::vector<int>> &matrix, float cellWidth, float cellHeight)
+    {
+        std::vector<GLfloat> vertices;
 
-    // 	nr_squares_ = rows_from_file_ * columns_from_file_;
-    // 	const int nr_rows = nr_squares_ / rows_from_file_;
-    // 	const int nr_columns = nr_squares_ / columns_from_file_;
+        for (int i = 0; i < matrix.size(); ++i)
+        {
+            for (int j = 0; j < matrix[i].size(); ++j)
+            {
+                if (matrix[i][j] != 0)
+                {
+                    // Map the matrix indices to OpenGL coordinates
+                    float x = -1.0f + (float)j * cellWidth;
+                    float y = 1.0f - (float)i * cellHeight;
 
-    // 	for (int i = 1; i <= nr_columns; i++)
-    // 	{
-    // 		for (int j = 1; j <= nr_rows; j++)
-    // 		{
-    // 			GLfloat bottom_left_x = x;
-    // 			GLfloat bottom_left_y = y - length_value_column;
-    // 			GLfloat bottom_left_z = z;
-    // 			GLfloat bottom_left_u = 0.0f;
-    // 			GLfloat bottom_left_v = 0.0f;
 
-    // 			GLfloat bottom_right_x = x + length_value_row;
-    // 			GLfloat bottom_right_y = y - length_value_column;
-    // 			GLfloat bottom_right_z = z;
-    // 			GLfloat bottom_right_u = 1.0f;
-    // 			GLfloat bottom_right_v = 0.0f;
+                    vertices.push_back(x);
+                    vertices.push_back(y - cellHeight);
+                    vertices.push_back(0.0f); 
+                    vertices.push_back(0.0f); 
+                    vertices.push_back(1.0f); 
 
-    // 			GLfloat top_right_x = x + length_value_row;
-    // 			GLfloat top_right_y = y;
-    // 			GLfloat top_right_z = z;
-    // 			GLfloat top_right_u = 1.0f;
-    // 			GLfloat top_right_v = 1.0f;
+                    vertices.push_back(x + cellWidth);
+                    vertices.push_back(y - cellHeight);
+                    vertices.push_back(0.0f); 
+                    vertices.push_back(1.0f); 
+                    vertices.push_back(1.0f); 
 
-    // 			GLfloat top_left_x = x;
-    // 			GLfloat top_left_y = y;
-    // 			GLfloat top_left_z = z;
-    // 			GLfloat top_left_u = 0.0f;
-    // 			GLfloat top_left_v = 1.0f;
+                    vertices.push_back(x + cellWidth);
+                    vertices.push_back(y);
+                    vertices.push_back(0.0f); 
+                    vertices.push_back(1.0f); 
+                    vertices.push_back(0.0f); 
 
-    // 			if ((i % 2 != 0 && j % 2 != 0) || (i % 2 == 0 && j % 2 == 0))
-    // 			{
-    // 				vec.push_back(bottom_left_x);
-    // 				vec.push_back(bottom_left_y);
-    // 				vec.push_back(bottom_left_z);
-    // 				vec.push_back(bottom_left_u);
-    // 				vec.push_back(bottom_left_v);
-    // 				vec.push_back(bottom_right_x);
-    // 				vec.push_back(bottom_right_y);
-    // 				vec.push_back(bottom_right_z);
-    // 				vec.push_back(bottom_right_u);
-    // 				vec.push_back(bottom_right_v);
-    // 				vec.push_back(top_right_x);
-    // 				vec.push_back(top_right_y);
-    // 				vec.push_back(top_right_z);
-    // 				vec.push_back(top_right_u);
-    // 				vec.push_back(top_right_v);
-    // 				vec.push_back(top_left_x);
-    // 				vec.push_back(top_left_y);
-    // 				vec.push_back(top_left_z);
-    // 				vec.push_back(top_left_u);
-    // 				vec.push_back(top_left_v);
-    // 			}
-    // 			else
-    // 			{
-    // 				vec2.push_back(bottom_left_x);
-    // 				vec2.push_back(bottom_left_y);
-    // 				vec2.push_back(bottom_left_z);
-    // 				vec2.push_back(bottom_left_u);
-    // 				vec2.push_back(bottom_left_v);
-    // 				vec2.push_back(bottom_right_x);
-    // 				vec2.push_back(bottom_right_y);
-    // 				vec2.push_back(bottom_right_z);
-    // 				vec2.push_back(bottom_right_u);
-    // 				vec2.push_back(bottom_right_v);
-    // 				vec2.push_back(top_right_x);
-    // 				vec2.push_back(top_right_y);
-    // 				vec2.push_back(top_right_z);
-    // 				vec2.push_back(top_right_u);
-    // 				vec2.push_back(top_right_v);
-    // 				vec2.push_back(top_left_x);
-    // 				vec2.push_back(top_left_y);
-    // 				vec2.push_back(top_left_z);
-    // 				vec2.push_back(top_left_u);
-    // 				vec2.push_back(top_left_v);
-    // 			}
+                    vertices.push_back(x);
+                    vertices.push_back(y);
+                    vertices.push_back(0.0f); 
+                    vertices.push_back(0.0f); 
+                    vertices.push_back(0.0f); 
+                }
+            }
+        }
 
-    // 			x = x + length_value_row;
-    // 		}
-
-    // 		x = -1.0f;
-    // 		y = y - length_value_column;
-    // 	}
-    // }
+        return vertices;
+    }
 
     bool helper::ReadNumbersFromFile(const std::string &filename, int &num1, int &num2)
     {
