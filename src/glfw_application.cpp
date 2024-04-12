@@ -73,15 +73,8 @@ namespace opengles_workspace
 			}
 			if (key == Key::DOWN && keyMode == KeyMode::PRESS)
 			{
-				if (pGame->HitsLowerBoundary(pRenderer->game_matrix))
-				{
-					pGame->TransformBoundary(pRenderer->game_matrix);
-					pGame->AddNewTwo(pRenderer->game_matrix);
-				}
-				else
-				{
-					pGame->MoveOneDown(pRenderer->game_matrix);
-				}
+
+				pGame->MoveOneDown(pRenderer->game_matrix);
 			}
 			if (key == Key::LEFT && keyMode == KeyMode::PRESS && pGame->HitsLeftBoundary(pRenderer->game_matrix) == false)
 			{

@@ -198,6 +198,50 @@ namespace opengles_workspace
 		}
 	}
 
+	bool hasRowFilledWithOnes(const std::vector<std::vector<int>> &matrix)
+	{
+		for (const auto &row : matrix)
+		{
+			bool allOnes = true;
+			for (int elem : row)
+			{
+				if (elem != 1)
+				{
+					allOnes = false;
+					break;
+				}
+			}
+			if (allOnes)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	// Function to shift rows down if there's a row filled with 1's in the matrix
+	void removeAndShiftRowsWithOnes(std::vector<std::vector<int>> &matrix)
+	{
+		int numRows = matrix.size();
+		for (int i = numRows - 1; i >= 0; --i)
+		{
+			bool allOnes = true;
+			for (int elem : matrix[i])
+			{
+				if (elem != 1)
+				{
+					allOnes = false;
+					break;
+				}
+			}
+			if (allOnes)
+			{
+				matrix.erase(matrix.begin() + i);
+				matrix.push_back(std::vector<int>(matrix[0].size(), 0));
+			}
+		}
+	}
+
 	bool GLFWRenderer::poll()
 	{
 		long long current_time = fps_instance.GetCurrentTimeMillis();
@@ -206,7 +250,17 @@ namespace opengles_workspace
 
 		if (elapsed_time >= 1.0f / target_fps)
 		{
+			game_state.MoveOneDown(game_matrix);
 			square_vertices_vector = helper_instance.CalculateSquareVertices(game_matrix,cell_width,cell_height);
+
+
+			if (game_state.HitsLowerBoundary(game_matrix))
+			{
+				game_state.TransformBoundary(game_matrix);
+				game_state.AddNewTwo(game_matrix);
+			}
+
+
 			render();
 			fps_instance.SetStartTime(current_time);
 		}
